@@ -178,9 +178,6 @@ print("6666666666666666")
 如果我们在创建训练集和验证集之前，没有对数据进行正确的随机化处理，
 那么以某种特定顺序接收数据可能会导致出现问题（似乎就是此时的问题）。'''
 
-
-
-
 print("7777777777777777")
 # 任务 4：训练和评估模型==================================================
 '''花费约 5 分钟的时间尝试不同的超参数设置。尽可能获取最佳验证效果。
@@ -282,9 +279,19 @@ def train_model(
   )
   
   # 1. Create input functions.
-  training_input_fn = # YOUR CODE HERE
-  predict_training_input_fn = # YOUR CODE HERE
-  predict_validation_input_fn = # YOUR CODE HERE
+  training_input_fn = lambda: my_input_fn(
+      training_examples, 
+      training_targets["median_house_value"], 
+      batch_size=batch_size)
+  predict_training_input_fn = lambda: my_input_fn(
+      training_examples, 
+      training_targets["median_house_value"], 
+      num_epochs=1, 
+      shuffle=False)
+  predict_validation_input_fn = lambda: my_input_fn(
+      validation_examples, validation_targets["median_house_value"], 
+      num_epochs=1, 
+      shuffle=False)
   
   # Train the model, but do so inside a loop so that we can periodically assess
   # loss metrics.
@@ -299,8 +306,11 @@ def train_model(
         steps=steps_per_period,
     )
     # 2. Take a break and compute predictions.
-    training_predictions = # YOUR CODE HERE
-    validation_predictions = # YOUR CODE HERE
+    training_predictions = linear_regressor.predict(input_fn=predict_training_input_fn)
+    training_predictions = np.array([item['predictions'][0] for item in training_predictions])
+    
+    validation_predictions = linear_regressor.predict(input_fn=predict_validation_input_fn)
+    validation_predictions = np.array([item['predictions'][0] for item in validation_predictions])
     
     # Compute training and validation loss.
     training_root_mean_squared_error = math.sqrt(
@@ -343,4 +353,31 @@ linear_regressor = train_model(
     training_targets=training_targets,
     validation_examples=validation_examples,
     validation_targets=validation_targets)
+
+print("8888888888888888")
+'''任务 5：基于测试数据进行评估
+在以下单元格中，载入测试数据集并据此评估模型。
+我们已对验证数据进行了大量迭代。接下来确保我们没有过拟合该特定样本集的特性。
+测试数据集位于此处。
+您的测试效果与验证效果的对比情况如何？对比情况表明您模型的泛化效果如何？'''
+#california_housing_test_data = pd.read_csv(
+# "https://storage.googleapis.com/mledu-datasets/california_housing_test.csv", sep=",")
+california_housing_test_data = pd.read_csv("california_housing_test.csv", sep=",")
+
+test_examples = preprocess_features(california_housing_test_data)
+test_targets = preprocess_targets(california_housing_test_data)
+
+predict_test_input_fn = lambda: my_input_fn(
+      test_examples, 
+      test_targets["median_house_value"], 
+      num_epochs=1, 
+      shuffle=False)
+
+test_predictions = linear_regressor.predict(input_fn=predict_test_input_fn)
+test_predictions = np.array([item['predictions'][0] for item in test_predictions])
+
+root_mean_squared_error = math.sqrt(
+    metrics.mean_squared_error(test_predictions, test_targets))
+
+print("Final RMSE (on test data): %0.2f" % root_mean_squared_error)
 
