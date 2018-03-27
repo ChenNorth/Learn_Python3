@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+__author__ = "cs-pc/2018-03-26"
+
 '''参考：
 https://blog.csdn.net/jerr__y/article/details/57084008
 TensorFlow入门（一）基本用法
@@ -15,6 +17,8 @@ TensorFlow入门（一）基本用法
 
 import tensorflow as tf
 import numpy as np
+
+
 
 '''==========================================================================================
 例一：平面拟合
@@ -36,12 +40,10 @@ optimizer = tf.train.GradientDescentOptimizer(0.5)
 # 迭代的目标：最小化损失函数
 train = optimizer.minimize(loss)
 
-
 ############################################################
 # 以下是用 tf 来解决上面的任务
 # 1.初始化变量：tf 的必备步骤，主要声明了变量，就必须初始化才能用
 init = tf.global_variables_initializer()
-
 
 # 设置tensorflow对GPU的使用按需分配
 config  = tf.ConfigProto()
@@ -55,7 +57,7 @@ for step in range(0, 201):
     sess.run(train)
     if step % 20 == 0:
         print(step, sess.run(W), sess.run(b))
-
+print("-------------------")
 # 得到最佳拟合结果 W: [[0.100  0.200]], b: [0.300]
 
 
@@ -74,6 +76,7 @@ with tf.Session() as sess:
     print(result)
     print(type(result))
     print(type(result[0]))
+print("--------------------------------------")
 
 
 
@@ -97,6 +100,7 @@ with tf.Session() as sess:
     for _ in range(3):
         sess.run(update)  # 这样子每一次运行state 都还是1
         print(sess.run(state))
+print("-------------------")
 
 
 
@@ -127,6 +131,7 @@ with tf.Session() as sess:
 #     print 'the mean is ', sess.run(sess.run(h_sum) / 4)
 # 这样写4是错误的，必须转为 tf变量或者常量
     print('the mean is ', sess.run(sess.run(h_sum) / tf.constant(4.0)))
+print("--------------------------------------")
 
 
 
@@ -147,10 +152,131 @@ print('init state ', sess.run(state))
 for _ in range(3):
     sess.run(add_op)
     print(sess.run(state))
+'''这样子和我们平时实现计数器的方法基本上就 一致了。
+我们要重点理解的是，
+TensorFlow 中通过 tf.assign(ref, value) 的方式来把 value 值赋给 ref 变量。
+这样子，每一次循环的时候，ref 变量才不会再做定义时候的初始化操作。'''
+print("-------------------")
+
+# 在函数内部用 assign 不会改变外边的值呀
+def chang_W(W1):
+    tf.assign(W1, [1.1, 1.2,1.3])
+    
+W = tf.get_variable('Weights', initializer=[0.2, 0.3, 0.4])
+sess.run(tf.global_variables_initializer())
+print('THE INIT W IS ', sess.run(W))
+chang_W(W)
+print('AFTER RUNNING THE FUNC ', sess.run(W))
 
 
 
+'''==========================================================================================
+2. InteractiveSession() 的用法
+InteractiveSession() 主要是避免 Session（会话）被一个变量持有'''
+a = tf.constant(1.0)
+b = tf.constant(2.0)
+c = a + b
+
+# 下面的两种情况是等价的
+with tf.Session():
+    print(c.eval())
+
+sess = tf.InteractiveSession()
+print(c.eval())
+sess.close()
+print("--------------------------------------")
 
 
 
+a = tf.constant(1.0)
+b = tf.constant(2.0)
+c = tf.Variable(3.0)
+d = a + b
+
+sess = tf.InteractiveSession()
+sess.run(tf.global_variables_initializer())
+
+###################
+# 这样写是错误的
+# print a.run()  
+# print d.run()
+
+####################
+
+# 这样才是正确的
+print(a.eval())  
+print(d.eval())
+
+# run() 方法主要用来
+x = tf.Variable(1.2)
+# print x.eval()  # 还没初始化，不能用
+x.initializer.run()  # x.initializer 就是一个初始化的 op， op才调用run() 方法
+print(x.eval())
+
+sess.close()
+print("-------------------")
+
+
+
+'''==========================================================================================
+2.1 怎样使用 tf.InteractiveSession()来完成上面1.2中求和、平均的操作呢?'''
+h_sum = tf.Variable(0.0, dtype=tf.float32)
+# h_vec = tf.random_normal(shape=([10]))
+h_vec = tf.constant([1.0,2.0,3.0,4.0])
+# 把 h_vec 的每个元素加到 h_sum 中，然后再除以 10 来计算平均值
+# 待添加的数
+h_add = tf.placeholder(tf.float32)
+# 添加之后的值
+h_new = tf.add(h_sum, h_add)
+# 更新 h_new 的 op
+update = tf.assign(h_sum, h_new)
+
+sess = tf.InteractiveSession()
+sess.run(tf.global_variables_initializer())
+print('s_sum =', h_sum.eval())
+print("vec = ", h_vec.eval())
+print("vec = ", h_vec[0].eval())
+
+
+for _ in range(4):
+    update.eval(feed_dict={h_add: h_vec[_].eval()})
+    print('h_sum =', h_sum.eval())
+sess.close()
+print("--------------------------------------")
+
+
+
+'''==========================================================================================
+3.使用feed来对变量赋值
+这些需要用到feed来赋值的操作可以通过tf.placeholder()说明，以创建占位符。 
+下面的例子中可以看出 session.run([output], …) 和 session.run(output, …) 的区别。
+前者输出了 output 的类型等详细信息，后者只输出简单结果。'''
+input1 = tf.placeholder(tf.float32)
+input2 = tf.placeholder(tf.float32)
+output = tf.multiply(input1, input2)
+
+with tf.Session() as sess:
+    print(sess.run([output], feed_dict={input1:[7.0], input2:[2.0]}))
+
+print("-------------------")
+
+with tf.Session() as sess:
+    result = sess.run(output, feed_dict={input1:[7.0], input2:[2.0]})
+    print(type(result))
+    print(result)
+print("--------------------------------------")
+
+with tf.Session() as sess:
+    result = sess.run(output, feed_dict={input1:7.0, input2:2.0})
+    print(type(result))
+    print(result)
+print("-------------------")
+
+with tf.Session() as sess:
+    print(sess.run([output], feed_dict={input1:[7.0, 3.0], input2:[2.0, 1.0]}))
+print("--------------------------------------")
+
+with tf.Session() as sess:
+    print(sess.run(output, feed_dict={input1:[7.0, 3.0], input2:[2.0, 1.0]}))
+print("-------------------")
 
