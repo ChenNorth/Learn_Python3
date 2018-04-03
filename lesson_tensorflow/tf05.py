@@ -220,7 +220,7 @@ h_bias = sess.run(bias, feed_dict={
 h_bias.shape = [-1, 10]
 
 bar_index = range(class_num)
-for i in xrange(X3_outputs.shape[0]):
+for i in range(X3_outputs.shape[0]):
     plt.subplot(7, 4, i+1)
     X3_h_shate = X3_outputs[i, :].reshape([-1, hidden_size])
     pro = sess.run(tf.nn.softmax(tf.matmul(X3_h_shate, h_W) + h_bias))
